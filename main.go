@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"fmt"
 
 	"github.com/agoussia/godes"
@@ -14,22 +15,12 @@ var charger_time *godes.UniformDistr = godes.NewUniformDistr(true)
 var truck_time *godes.UniformDistr = godes.NewUniformDistr(true)
 var tim_gen *godes.UniformDistr = godes.NewUniformDistr(true)
 
-var char charger = charger{&godes.Runner{}, godes.NewFIFOQueue("charger"), godes.NewBooleanControl()}
-var pil pile = pile{&godes.Runner{}, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()}
+var pils dispatcher
+var chars dispatcher
 
-type truck struct {
-	*godes.Runner
-	id, value int
-	busy      *godes.BooleanControl
-	state     rune //Parado, Transito,Cargando, Descargando, Moviendo
-}
-type pile struct {
-	*godes.Runner
-	qe       *godes.FIFOQueue
-	empty_qe *godes.BooleanControl
-}
 type charger struct {
 	*godes.Runner
+	id       int
 	qe       *godes.FIFOQueue
 	empty_qe *godes.BooleanControl
 }
@@ -54,6 +45,14 @@ func (ch charger) Run() {
 
 	}
 }
+
+type pile struct {
+	*godes.Runner
+	id       int
+	qe       *godes.FIFOQueue
+	empty_qe *godes.BooleanControl
+}
+
 func (pl pile) Run() {
 	pl.empty_qe.Set(true)
 	for {
@@ -72,6 +71,14 @@ func (pl pile) Run() {
 
 	}
 }
+
+type truck struct {
+	*godes.Runner
+	id, value int
+	busy      *godes.BooleanControl
+	state     rune //Parado, Transito,Cargando, Descargando, Moviendo
+}
+
 func (tr truck) Run() {
 	for {
 		if SHUT_DOWN_TIME < godes.GetSystemTime() {
@@ -86,8 +93,9 @@ func (tr truck) Run() {
 			tr.state = 'C'
 		case 'C':
 			fmt.Println("T ", tr.id, " : Cargando")
-			char.qe.Place(tr)
-			char.empty_qe.Set(false)
+			chars.e.Value.(charger).qe.Place(tr)
+			chars.nextList()
+			chars.e.Value.(charger).empty_qe.Set(false)
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
 			tr.state = 'T'
@@ -97,8 +105,8 @@ func (tr truck) Run() {
 			tr.state = 'D'
 		case 'D':
 			fmt.Println("T ", tr.id, " : Descargando")
-			pil.qe.Place(tr)
-			pil.empty_qe.Set(false)
+			pils.e.Value.(charger).qe.Place(tr)
+			pils.e.Value.(charger).empty_qe.Set(false)
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
 			tr.state = 'M'
@@ -111,7 +119,6 @@ func (tr truck) Run() {
 		}
 	}
 }
-
 func (tr truck) receive(x int) bool {
 	if tr.state == 'C' {
 		tr.value = x
@@ -124,12 +131,46 @@ func (tr truck) receive(x int) bool {
 func (tr truck) get() int {
 	return tr.value
 }
+
+type dispatcher struct {
+	tipe rune
+	lis  *list.List
+	e    *list.Element
+}
+
+func (ds dispatcher) init(r rune) dispatcher {
+	return dispatcher{r, list.New(), nil}
+}
+
+func (ds dispatcher) addList(e interface{}) {
+	if ds.e == nil {
+		ds.e = ds.lis.PushFront(e)
+	}
+	ds.lis.PushFront(e)
+}
+func (ds dispatcher) nextList() *list.Element {
+	ds.e = ds.e.Next()
+	return ds.e
+}
+
+func (ds dispatcher) dispatch() interface{} {
+	return ds.nextList()
+}
+
 func main() {
+	pils = pils.init('p')
+	chars = chars.init('c')
 	godes.Run()
 	godes.AddRunner(&truck{&godes.Runner{}, 1, 0, godes.NewBooleanControl(), 'P'})
 	godes.AddRunner(&truck{&godes.Runner{}, 2, 0, godes.NewBooleanControl(), 'P'})
-	godes.AddRunner(&char)
-	godes.AddRunner(&pil)
+	for i := 0; i < 3; i++ {
+		pils.addList(pile{&godes.Runner{}, i, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()})
+		//pils = append(pils, pile{&godes.Runner{}, i, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()})
+	}
+	for i := 0; i < 3; i++ {
+		chars.addList(charger{&godes.Runner{}, i, godes.NewFIFOQueue("chars"), godes.NewBooleanControl()})
+		//chars = append(chars, charger{&godes.Runner{}, i, godes.NewFIFOQueue("chars"), godes.NewBooleanControl()})
+	}
 
 	godes.WaitUntilDone()
 }
