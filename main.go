@@ -93,9 +93,10 @@ func (tr truck) Run() {
 			tr.state = 'C'
 		case 'C':
 			fmt.Println("T ", tr.id, " : Cargando")
-			chars.e.Value.(charger).qe.Place(tr)
+
+			chars.lis.Front().Value.(charger).qe.Place(tr)
+			chars.lis.Front().Value.(charger).empty_qe.Set(false)
 			chars.nextList()
-			chars.e.Value.(charger).empty_qe.Set(false)
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
 			tr.state = 'T'
@@ -105,8 +106,9 @@ func (tr truck) Run() {
 			tr.state = 'D'
 		case 'D':
 			fmt.Println("T ", tr.id, " : Descargando")
-			pils.e.Value.(charger).qe.Place(tr)
-			pils.e.Value.(charger).empty_qe.Set(false)
+			pils.lis.Front().Value.(pile).qe.Place(tr)
+			pils.lis.Front().Value.(pile).empty_qe.Set(false)
+			pils.nextList()
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
 			tr.state = 'M'
@@ -135,42 +137,37 @@ func (tr truck) get() int {
 type dispatcher struct {
 	tipe rune
 	lis  *list.List
-	e    *list.Element
 }
 
 func (ds dispatcher) init(r rune) dispatcher {
-	return dispatcher{r, list.New(), nil}
+	return dispatcher{r, list.New()}
 }
 
-func (ds dispatcher) addList(e interface{}) {
-	if ds.e == nil {
-		ds.e = ds.lis.PushFront(e)
-	}
-	ds.lis.PushFront(e)
+func (ds dispatcher) addList(x interface{}) {
+	ds.lis.PushBack(x)
 }
 func (ds dispatcher) nextList() *list.Element {
-	ds.e = ds.e.Next()
-	return ds.e
+	e := ds.lis.Front()
+	ds.lis.MoveToBack(e)
+	return e
 }
 
-func (ds dispatcher) dispatch() interface{} {
-	return ds.nextList()
-}
+/* func (ds dispatcher) dispatch() interface{} {
+	//error
+	return ds.e
+} */
 
 func main() {
 	pils = pils.init('p')
 	chars = chars.init('c')
-	godes.Run()
 	godes.AddRunner(&truck{&godes.Runner{}, 1, 0, godes.NewBooleanControl(), 'P'})
 	godes.AddRunner(&truck{&godes.Runner{}, 2, 0, godes.NewBooleanControl(), 'P'})
 	for i := 0; i < 3; i++ {
 		pils.addList(pile{&godes.Runner{}, i, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()})
-		//pils = append(pils, pile{&godes.Runner{}, i, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()})
 	}
 	for i := 0; i < 3; i++ {
 		chars.addList(charger{&godes.Runner{}, i, godes.NewFIFOQueue("chars"), godes.NewBooleanControl()})
-		//chars = append(chars, charger{&godes.Runner{}, i, godes.NewFIFOQueue("chars"), godes.NewBooleanControl()})
 	}
-
+	godes.Run()
 	godes.WaitUntilDone()
 }
