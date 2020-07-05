@@ -1,9 +1,9 @@
 package main
 
 import (
-	"container/list"
+	
 	"fmt"
-	"github.com/noujox/CoSimGo/pile.go"
+	
 	"github.com/agoussia/godes"
 )
 
@@ -17,60 +17,6 @@ var tim_gen *godes.UniformDistr = godes.NewUniformDistr(true)
 
 var pils dispatcher
 var chars dispatcher
-
-type charger struct {
-	*godes.Runner
-	id       int
-	qe       *godes.FIFOQueue
-	empty_qe *godes.BooleanControl
-}
-
-func (ch charger) Run() {
-	var x int
-	ch.empty_qe.Set(true)
-	for {
-		if SHUT_DOWN_TIME < godes.GetSystemTime() {
-			break
-		}
-		ch.empty_qe.Wait(false)
-		tru := ch.qe.Get().(truck)
-		if ch.qe.Len() == 0 {
-			ch.empty_qe.Set(true)
-		}
-		godes.Yield()
-
-		tru.receive(x)
-		tru.busy.Set(false)
-		x++
-
-	}
-}
-
-type pile struct {
-	*godes.Runner
-	id       int
-	qe       *godes.FIFOQueue
-	empty_qe *godes.BooleanControl
-}
-
-func (pl pile) Run() {
-	pl.empty_qe.Set(true)
-	for {
-		if SHUT_DOWN_TIME < godes.GetSystemTime() {
-			break
-		}
-		pl.empty_qe.Wait(false)
-		tru := pl.qe.Get().(truck)
-		if pl.qe.Len() == 0 {
-			pl.empty_qe.Set(true)
-		}
-		godes.Yield()
-
-		tru.get()
-		tru.busy.Set(false)
-
-	}
-}
 
 type truck struct {
 	*godes.Runner
@@ -133,29 +79,6 @@ func (tr truck) receive(x int) bool {
 func (tr truck) get() int {
 	return tr.value
 }
-
-type dispatcher struct {
-	tipe rune
-	lis  *list.List
-}
-
-func (ds dispatcher) init(r rune) dispatcher {
-	return dispatcher{r, list.New()}
-}
-
-func (ds dispatcher) addList(x interface{}) {
-	ds.lis.PushBack(x)
-}
-func (ds dispatcher) nextList() *list.Element {
-	e := ds.lis.Front()
-	ds.lis.MoveToBack(e)
-	return e
-}
-
-/* func (ds dispatcher) dispatch() interface{} {
-	//error
-	return ds.e
-} */
 
 func main() {
 	pils = pils.init('p')
