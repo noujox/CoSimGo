@@ -3,7 +3,7 @@ package main
 import (
 	"container/list"
 	"fmt"
-	"./pile.go"
+	"github.com/noujox/CoSimGo/pile.go"
 	"github.com/agoussia/godes"
 )
 
