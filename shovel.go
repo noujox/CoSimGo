@@ -1,14 +1,15 @@
 package main
+
 import "github.com/agoussia/godes"
 
-type charger struct {
+type shovel struct {
 	*godes.Runner
 	id       int
 	qe       *godes.FIFOQueue
 	empty_qe *godes.BooleanControl
 }
 
-func (ch charger) Run() {
+func (ch shovel) Run() {
 	var x int
 	ch.empty_qe.Set(true)
 	for {

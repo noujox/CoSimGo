@@ -2,12 +2,21 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/agoussia/godes"
-	
 )
 
 const (
 	SHUT_DOWN_TIME = 1 * 60
+	// estados del truck
+	PARADO        = 101
+	CARGANDO      = 102
+	TRANSPORTANDO = 103
+	DESCARGANDO   = 104
+	REGRESANDO    = 105
+	//tipos de pile
+	STOCK_PILE_TYPE = 201
+	CHARGER_TYPE    = 202
 )
 
 var charger_time *godes.UniformDistr = godes.NewUniformDistr(true)
@@ -27,7 +36,7 @@ type truck struct {
 func (tr truck) Run() {
 	for {
 		if SHUT_DOWN_TIME < godes.GetSystemTime() {
-			tr.state = 'P'
+			tr.state = PARADO
 			break
 		}
 
@@ -35,32 +44,32 @@ func (tr truck) Run() {
 		case 'P':
 			fmt.Println("T ", tr.id, " : Parado... iniciando")
 			godes.Advance(tim_gen.Get(1, 5))
-			tr.state = 'C'
+			tr.state = PARADO
 		case 'C':
 			fmt.Println("T ", tr.id, " : Cargando")
 
-			chars.lis.Front().Value.(charger).qe.Place(tr)
-			chars.lis.Front().Value.(charger).empty_qe.Set(false)
+			chars.lis.Front().Value.(shovel).qe.Place(tr)
+			chars.lis.Front().Value.(shovel).empty_qe.Set(false)
 			chars.nextList()
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
-			tr.state = 'T'
+			tr.state = CARGANDO
 		case 'T':
 			fmt.Println("T ", tr.id, " : Transportando")
 			godes.Advance(tim_gen.Get(5, 10))
-			tr.state = 'D'
+			tr.state = TRANSPORTANDO
 		case 'D':
 			fmt.Println("T ", tr.id, " : Descargando")
-			pils.lis.Front().Value.(pile).qe.Place(tr)
-			pils.lis.Front().Value.(pile).empty_qe.Set(false)
+			pils.lis.Front().Value.(stockPile).qe.Place(tr)
+			pils.lis.Front().Value.(stockPile).empty_qe.Set(false)
 			pils.nextList()
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
-			tr.state = 'M'
+			tr.state = DESCARGANDO
 		case 'M':
 			fmt.Println("T ", tr.id, " : Volviendo a cargar")
 			godes.Advance(tim_gen.Get(1, 5))
-			tr.state = 'C'
+			tr.state = REGRESANDO
 		default:
 			fmt.Println("exploto")
 		}
@@ -80,15 +89,15 @@ func (tr truck) get() int {
 }
 
 func main() {
-	pils = pils.init('p')
-	chars = chars.init('c')
-	godes.AddRunner(&truck{&godes.Runner{}, 1, 0, godes.NewBooleanControl(), 'P'})
-	godes.AddRunner(&truck{&godes.Runner{}, 2, 0, godes.NewBooleanControl(), 'P'})
+	pils = pils.init(STOCK_PILE_TYPE)
+	chars = chars.init(CHARGER_TYPE)
+	godes.AddRunner(&truck{&godes.Runner{}, 1, 0, godes.NewBooleanControl(), PARADO})
+	godes.AddRunner(&truck{&godes.Runner{}, 2, 0, godes.NewBooleanControl(), PARADO})
 	for i := 0; i < 3; i++ {
-		pils.addList(pile{&godes.Runner{}, i, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()})
+		pils.addList(stockPile{&godes.Runner{}, i, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()})
 	}
 	for i := 0; i < 3; i++ {
-		chars.addList(charger{&godes.Runner{}, i, godes.NewFIFOQueue("chars"), godes.NewBooleanControl()})
+		chars.addList(shovel{&godes.Runner{}, i, godes.NewFIFOQueue("chars"), godes.NewBooleanControl()})
 	}
 	godes.Run()
 	godes.WaitUntilDone()
