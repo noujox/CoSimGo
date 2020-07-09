@@ -14,6 +14,7 @@ const (
 	TRANSPORTANDO = 103
 	DESCARGANDO   = 104
 	REGRESANDO    = 105
+	AVERIADO      = 110
 	//tipos de pile
 	STOCK_PILE_TYPE = 201
 	CHARGER_TYPE    = 202
@@ -26,14 +27,18 @@ var tim_gen *godes.UniformDistr = godes.NewUniformDistr(true)
 var pils dispatcher
 var chars dispatcher
 
-type truck struct {
+type truckMachine struct {
 	*godes.Runner
 	id, value int
 	busy      *godes.BooleanControl
 	state     rune //Parado, Transito,Cargando, Descargando, Moviendo
 }
+type truck struct {
+	*godes.Runner
+	machine *truckMachine
+}
 
-func (tr truck) Run() {
+func (tr truckMachine) Run() {
 	for {
 		if SHUT_DOWN_TIME < godes.GetSystemTime() {
 			tr.state = PARADO
@@ -75,7 +80,7 @@ func (tr truck) Run() {
 		}
 	}
 }
-func (tr truck) receive(x int) bool {
+func (tr truckMachine) receive(x int) bool {
 	if tr.state == 'C' {
 		tr.value = x
 		return true
@@ -84,15 +89,23 @@ func (tr truck) receive(x int) bool {
 		return false
 	}
 }
-func (tr truck) get() int {
+func (tr truckMachine) get() int {
 	return tr.value
+}
+
+func newTruck(id int) *truck {
+	tm := &truckMachine{&godes.Runner{}, id, 0, godes.NewBooleanControl(), PARADO}
+	godes.AddRunner(tm)
+	return &truck{&godes.Runner{}, tm}
 }
 
 func main() {
 	pils = pils.init(STOCK_PILE_TYPE)
 	chars = chars.init(CHARGER_TYPE)
-	godes.AddRunner(&truck{&godes.Runner{}, 1, 0, godes.NewBooleanControl(), PARADO})
-	godes.AddRunner(&truck{&godes.Runner{}, 2, 0, godes.NewBooleanControl(), PARADO})
+
+	godes.AddRunner(newTruck(1))
+	godes.AddRunner(newTruck(2))
+
 	for i := 0; i < 3; i++ {
 		pils.addList(stockPile{&godes.Runner{}, i, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()})
 	}

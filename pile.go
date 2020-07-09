@@ -16,7 +16,7 @@ func (pl stockPile) Run() {
 			break
 		}
 		pl.empty_qe.Wait(false)
-		tru := pl.qe.Get().(truck)
+		tru := pl.qe.Get().(truckMachine)
 		if pl.qe.Len() == 0 {
 			pl.empty_qe.Set(true)
 		}

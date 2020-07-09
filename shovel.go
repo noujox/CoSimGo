@@ -17,7 +17,7 @@ func (ch shovel) Run() {
 			break
 		}
 		ch.empty_qe.Wait(false)
-		tru := ch.qe.Get().(truck)
+		tru := ch.qe.Get().(truckMachine)
 		if ch.qe.Len() == 0 {
 			ch.empty_qe.Set(true)
 		}
