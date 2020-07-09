@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	SHUT_DOWN_TIME = 1 * 60
+	SHUT_DOWN_TIME = 4 * 60
 	// estados del truck
 	PARADO        = 101
 	CARGANDO      = 102
@@ -23,6 +23,7 @@ const (
 var charger_time *godes.UniformDistr = godes.NewUniformDistr(true)
 var truck_time *godes.UniformDistr = godes.NewUniformDistr(true)
 var tim_gen *godes.UniformDistr = godes.NewUniformDistr(true)
+var breaksGen *godes.ExpDistr = godes.NewExpDistr(true)
 
 var pils dispatcher
 var chars dispatcher
@@ -36,6 +37,25 @@ type truckMachine struct {
 type truck struct {
 	*godes.Runner
 	machine *truckMachine
+}
+
+func (trm truck) Run() {
+	machine := trm.machine
+	for {
+		godes.Advance(breaksGen.Get(1 / 20))
+		if machine.state == PARADO {
+			break
+		}
+
+		interrupted := godes.GetSystemTime()
+		godes.Interrupt(machine)
+		godes.Advance(5)
+		if machine.state == PARADO {
+			break
+		}
+		godes.Resume(machine, godes.GetSystemTime()-interrupted)
+
+	}
 }
 
 func (tr truckMachine) Run() {
