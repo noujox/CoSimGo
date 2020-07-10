@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/agoussia/godes"
 )
 
 const (
-	SHUT_DOWN_TIME = 4 * 60
+	SHUT_DOWN_TIME = 1 * 60
 	// estados del truck
 	PARADO        = 101
 	CARGANDO      = 102
@@ -66,42 +67,48 @@ func (tr truckMachine) Run() {
 		}
 
 		switch tr.state {
-		case 'P':
-			fmt.Println("T ", tr.id, " : Parado... iniciando")
+		case PARADO:
+			fmt.Println("T ", tr.id, ": Parado..  \t", godes.GetSystemTime())
 			godes.Advance(tim_gen.Get(1, 5))
-			tr.state = PARADO
-		case 'C':
-			fmt.Println("T ", tr.id, " : Cargando")
+			tr.state = CARGANDO
 
+		case CARGANDO:
+			fmt.Println("T ", tr.id, ": Cargando \t", godes.GetSystemTime())
 			chars.lis.Front().Value.(shovel).qe.Place(tr)
 			chars.lis.Front().Value.(shovel).empty_qe.Set(false)
 			chars.nextList()
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
-			tr.state = CARGANDO
-		case 'T':
-			fmt.Println("T ", tr.id, " : Transportando")
-			godes.Advance(tim_gen.Get(5, 10))
 			tr.state = TRANSPORTANDO
-		case 'D':
-			fmt.Println("T ", tr.id, " : Descargando")
+
+		case TRANSPORTANDO:
+			fmt.Println("T ", tr.id, ": Transportando\t", godes.GetSystemTime())
+			godes.Advance(tim_gen.Get(5, 10))
+			tr.state = DESCARGANDO
+
+		case DESCARGANDO:
+			fmt.Println("T ", tr.id, ": Descargando\t", godes.GetSystemTime())
 			pils.lis.Front().Value.(stockPile).qe.Place(tr)
 			pils.lis.Front().Value.(stockPile).empty_qe.Set(false)
 			pils.nextList()
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
-			tr.state = DESCARGANDO
-		case 'M':
-			fmt.Println("T ", tr.id, " : Volviendo a cargar")
-			godes.Advance(tim_gen.Get(1, 5))
 			tr.state = REGRESANDO
+
+		case REGRESANDO:
+			fmt.Println("T ", tr.id, ": Volviendo \t", godes.GetSystemTime())
+			godes.Advance(tim_gen.Get(1, 5))
+			tr.state = PARADO
+
 		default:
-			fmt.Println("exploto")
+			fmt.Println("explotoo")
+			time.Sleep(time.Second)
+			break
 		}
 	}
 }
 func (tr truckMachine) receive(x int) bool {
-	if tr.state == 'C' {
+	if tr.state == CARGANDO {
 		tr.value = x
 		return true
 	} else {
@@ -128,9 +135,11 @@ func main() {
 
 	for i := 0; i < 3; i++ {
 		pils.addList(stockPile{&godes.Runner{}, i, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()})
+		godes.AddRunner(pils.lis.Back().Value.(stockPile))
 	}
 	for i := 0; i < 3; i++ {
 		chars.addList(shovel{&godes.Runner{}, i, godes.NewFIFOQueue("chars"), godes.NewBooleanControl()})
+		godes.AddRunner(chars.lis.Back().Value.(shovel))
 	}
 	godes.Run()
 	godes.WaitUntilDone()
