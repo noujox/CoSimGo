@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/agoussia/godes"
 )
@@ -50,6 +49,7 @@ func (trm truck) Run() {
 
 		interrupted := godes.GetSystemTime()
 		godes.Interrupt(machine)
+		fmt.Println("Truck ", machine.id, " fallo \t", godes.GetSystemTime())
 		godes.Advance(5)
 		if machine.state == PARADO {
 			break
@@ -98,11 +98,10 @@ func (tr truckMachine) Run() {
 		case REGRESANDO:
 			fmt.Println("T ", tr.id, ": Volviendo \t", godes.GetSystemTime())
 			godes.Advance(tim_gen.Get(1, 5))
-			tr.state = PARADO
+			tr.state = CARGANDO
 
 		default:
 			fmt.Println("explotoo")
-			time.Sleep(time.Second)
 			break
 		}
 	}
