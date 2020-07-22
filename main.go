@@ -32,7 +32,7 @@ type truckMachine struct {
 	*godes.Runner
 	id, value int
 	busy      *godes.BooleanControl
-	state     rune //Parado, Transito,Cargando, Descargando, Moviendo
+	activitie rune //Parado, Transito,Cargando, Descargando, Moviendo
 }
 type truck struct {
 	*godes.Runner
@@ -43,7 +43,7 @@ func (trm truck) Run() {
 	machine := trm.machine
 	for {
 		godes.Advance(breaksGen.Get(1 / 20))
-		if machine.state == PARADO {
+		if machine.activitie == PARADO {
 			break
 		}
 
@@ -51,7 +51,7 @@ func (trm truck) Run() {
 		godes.Interrupt(machine)
 		fmt.Println("Truck ", machine.id, " fallo \t", godes.GetSystemTime())
 		godes.Advance(5)
-		if machine.state == PARADO {
+		if machine.activitie == PARADO {
 			break
 		}
 		godes.Resume(machine, godes.GetSystemTime()-interrupted)
@@ -62,15 +62,15 @@ func (trm truck) Run() {
 func (tr truckMachine) Run() {
 	for {
 		if SHUT_DOWN_TIME < godes.GetSystemTime() {
-			tr.state = PARADO
+			tr.activitie = PARADO
 			break
 		}
 
-		switch tr.state {
+		switch tr.activitie {
 		case PARADO:
 			fmt.Println("T ", tr.id, ": Parado..  \t", godes.GetSystemTime())
 			godes.Advance(tim_gen.Get(1, 5))
-			tr.state = CARGANDO
+			tr.activitie = CARGANDO
 
 		case CARGANDO:
 			fmt.Println("T ", tr.id, ": Cargando \t", godes.GetSystemTime())
@@ -79,12 +79,12 @@ func (tr truckMachine) Run() {
 			chars.nextList()
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
-			tr.state = TRANSPORTANDO
+			tr.activitie = TRANSPORTANDO
 
 		case TRANSPORTANDO:
 			fmt.Println("T ", tr.id, ": Transportando\t", godes.GetSystemTime())
 			godes.Advance(tim_gen.Get(5, 10))
-			tr.state = DESCARGANDO
+			tr.activitie = DESCARGANDO
 
 		case DESCARGANDO:
 			fmt.Println("T ", tr.id, ": Descargando\t", godes.GetSystemTime())
@@ -93,12 +93,12 @@ func (tr truckMachine) Run() {
 			pils.nextList()
 			tr.busy.Set(true)
 			tr.busy.Wait(false)
-			tr.state = REGRESANDO
+			tr.activitie = REGRESANDO
 
 		case REGRESANDO:
 			fmt.Println("T ", tr.id, ": Volviendo \t", godes.GetSystemTime())
 			godes.Advance(tim_gen.Get(1, 5))
-			tr.state = CARGANDO
+			tr.activitie = CARGANDO
 
 		default:
 			fmt.Println("explotoo")
@@ -107,7 +107,7 @@ func (tr truckMachine) Run() {
 	}
 }
 func (tr truckMachine) receive(x int) bool {
-	if tr.state == CARGANDO {
+	if tr.activitie == CARGANDO {
 		tr.value = x
 		return true
 	} else {
