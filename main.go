@@ -8,13 +8,16 @@ import (
 
 const (
 	SHUT_DOWN_TIME = 1 * 60
-	// estados del truck
+	// ACTIVIDADES del truck
 	PARADO        = 101
 	CARGANDO      = 102
 	TRANSPORTANDO = 103
 	DESCARGANDO   = 104
 	REGRESANDO    = 105
 	AVERIADO      = 110
+	// ESTADOS del truck
+	FALLA     = 150
+	OPERATIVO = 151
 	//tipos de pile
 	STOCK_PILE_TYPE = 201
 	CHARGER_TYPE    = 202
@@ -102,10 +105,10 @@ func (tr truckMachine) Run() {
 
 		default:
 			fmt.Println("explotoo")
-			break
 		}
 	}
 }
+
 func (tr truckMachine) receive(x int) bool {
 	if tr.activitie == CARGANDO {
 		tr.value = x
@@ -133,8 +136,8 @@ func main() {
 	godes.AddRunner(newTruck(2))
 
 	for i := 0; i < 3; i++ {
-		pils.addList(stockPile{&godes.Runner{}, i, godes.NewFIFOQueue("pile"), godes.NewBooleanControl()})
-		godes.AddRunner(pils.lis.Back().Value.(stockPile))
+		pils.addList(stockPile{i, 3, godes.NewFIFOQueue("pile"), godes.NewBooleanControl(), []pilePort{}})
+		pils.lis.Back().Value.(stockPile).init()
 	}
 	for i := 0; i < 3; i++ {
 		chars.addList(shovel{&godes.Runner{}, i, godes.NewFIFOQueue("chars"), godes.NewBooleanControl()})
