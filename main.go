@@ -118,6 +118,7 @@ func (tr truckMachine) receive(x int) bool {
 		return false
 	}
 }
+
 func (tr truckMachine) get() int {
 	return tr.value
 }
